@@ -41,7 +41,10 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     networks:
-      edge: {}
+      edge:
+        # Caddy's default route (and DNS) must go through the internet-facing
+        # network, never the internal one. Requires Docker Engine 28+.
+        gw_priority: 1
       backend:
         ipv4_address: 172.30.0.2
     read_only: true
