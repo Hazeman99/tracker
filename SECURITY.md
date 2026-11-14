@@ -1,6 +1,8 @@
 # Security
 
-Tracker is a single-user tool whose API is exposed to the public internet.
+Tracker is a single-user tool. It was specified for an API exposed to the
+public internet and is built to that standard; the current deployment
+additionally publishes it **only on the server's Tailscale address**.
 This document records how the API maps to the
 [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/editions/2023/en/0x11-t10/),
 what the desktop app does to protect the session, and what is **not** fully
@@ -8,8 +10,12 @@ addressed.
 
 ## Threat model in one paragraph
 
-The attacker is anyone on the internet who can reach `https://<domain>`. They
-do not have the password or a session token. Secondary threats: a stolen
+The API is designed as if any attacker on the internet could reach it. In the
+current deployment only devices on the owner's tailnet can open a connection
+(Caddy's ports are bound to the Tailscale IP), which is an additional layer,
+not a replacement for any control below. Attackers considered: anyone who can
+reach the API (another tailnet device, or the internet if the binding is ever
+widened). They do not have the password or a session token. Secondary threats: a stolen
 device or token, a malicious local process on one of the desktop machines,
 and a compromised dependency. Out of scope: a compromised server host or
 Docker daemon (they own the database file regardless).
@@ -92,9 +98,15 @@ Docker daemon (they own the database file regardless).
   `internal: true` Docker network with no route to the internet.
 
 ### API8 Security Misconfiguration — addressed
-- TLS terminates at Caddy: automatic certificates, HTTP→HTTPS redirect, HSTS
-  (2 years, includeSubDomains), TLS 1.2+ only, `Server`/`Via` headers removed,
-  admin endpoint disabled.
+- TLS terminates at Caddy with a Let's Encrypt certificate for the server's
+  MagicDNS name, obtained on the host by `tailscale cert`
+  (`deploy/renew-cert.sh`, weekly cron); the key is 0600 and mounted read-only.
+  The tailscaled socket is deliberately not mounted into the container, so a
+  compromised Caddy cannot reconfigure the host's Tailscale. HTTP→HTTPS
+  redirect, HSTS (2 years, includeSubDomains), TLS 1.2+ only, `Server`/`Via`
+  headers removed, admin endpoint disabled.
+- Caddy's ports are published on the Tailscale IPv4 address only
+  (`TRACKER_BIND_IP`), not on the public interface or the LAN.
 - Every API response carries `X-Content-Type-Options: nosniff`,
   `Cache-Control: no-store`, `Referrer-Policy: no-referrer`,
   `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; …`,
@@ -112,7 +124,8 @@ Docker daemon (they own the database file regardless).
   SHM files are 0600 (umask 077 plus explicit chmod). Only Caddy publishes
   ports.
 - Configuration is through environment variables only; no secrets exist in the
-  repository (`deploy/.env.example` holds only the domain).
+  repository (`deploy/.env` holds only the host name, Tailscale IP and port;
+  the certificate key lives in the git-ignored `deploy/certs/`).
 - The client IP is taken from `X-Forwarded-For` only when the socket peer is
   Caddy's fixed address on the internal network, and then only the rightmost
   entry (the one Caddy appended) is used.
@@ -184,28 +197,34 @@ Docker daemon (they own the database file regardless).
    `no-new-privileges`), because the official image expects it.
 8. **The SQLite file is not encrypted at rest.** Protect the server and its
    backups; the backups contain password hashes and session token hashes.
-9. **govulncheck needs `vuln.go.dev`.** If your network blocks it, run
+9. **Tailscale-specific.** Every device on the tailnet can reach the API, so
+   tailnet membership is part of the trust boundary; restrict it further with
+   Tailscale ACLs if other people or untrusted devices share the tailnet. The
+   certificate's name (machine and tailnet name) is published in Certificate
+   Transparency logs. Binding before the address exists relies on
+   `net.ipv4.ip_nonlocal_bind=1` on the host.
+10. **govulncheck needs `vuln.go.dev`.** If your network blocks it, run
    `make check VULNCHECK_IN_DOCKER=1` (the database is fetched through a
    container and the scan runs locally against that copy).
 
 ### Desktop
 
-10. **macOS Keychain access control.** `zalando/go-keyring` creates the item
+11. **macOS Keychain access control.** `zalando/go-keyring` creates the item
     through `/usr/bin/security`, so the item's access list trusts that tool:
     any process running as your macOS user can read the token with
     `security find-generic-password` without a prompt. This is still far
     better than a file (no plaintext on disk, not in backups), but it is not
     per-app isolation. Binding the item to the app would require the native
     Keychain API through cgo (another dependency); not done without your OK.
-11. **Linux needs a running Secret Service** (GNOME Keyring, KWallet ≥ 5.97,
+12. **Linux needs a running Secret Service** (GNOME Keyring, KWallet ≥ 5.97,
     KeePassXC…). Without one, connecting fails with an explicit error; there
     is deliberately no file fallback.
-12. **Dev builds are weaker by design.** `make desktop-dev` (build tag `dev`)
+13. **Dev builds are weaker by design.** `make desktop-dev` (build tag `dev`)
     accepts `http://localhost` servers and serves the UI from the Vite dev
     server without the CSP, enables the web inspector and the default context
     menu. Release builds (`make desktop-build`) have none of this.
-13. **The macOS app is ad-hoc signed, not notarized.** Gatekeeper will ask for
+14. **The macOS app is ad-hoc signed, not notarized.** Gatekeeper will ask for
     confirmation the first time it is opened (right-click → Open).
-14. **The Linux build was compiled and vetted in a Debian 13 container (GTK
+15. **The Linux build was compiled and vetted in a Debian 13 container (GTK
     4.18, WebKitGTK 2.54) but not exercised interactively** during
     development; the macOS build was.

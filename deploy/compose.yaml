@@ -1,5 +1,7 @@
-# Tracker deployment: the API on an internal-only network, Caddy in front.
-# Usage: cp .env.example .env && edit, then `docker compose up -d --build`.
+# Tracker deployment: the API on an internal-only network, Caddy in front,
+# published only on the server's Tailscale address.
+# Usage: cp .env.example .env && edit, ./renew-cert.sh, then
+# `docker compose up -d --build`. See README section 1.
 name: tracker
 
 services:
@@ -30,20 +32,26 @@ services:
     image: caddy:2.11.9-alpine
     restart: unless-stopped
     depends_on: [api]
+    # Published on the Tailscale IP only: unreachable from the public
+    # internet and the LAN. Port 80 only redirects to HTTPS.
     ports:
-      - "80:80"
-      - "443:443"
-      - "443:443/udp"
+      - "${TRACKER_BIND_IP:?set TRACKER_BIND_IP in deploy/.env}:80:80"
+      - "${TRACKER_BIND_IP}:${TRACKER_HTTPS_PORT:-8443}:${TRACKER_HTTPS_PORT:-8443}"
+      - "${TRACKER_BIND_IP}:${TRACKER_HTTPS_PORT:-8443}:${TRACKER_HTTPS_PORT:-8443}/udp"
     environment:
       TRACKER_DOMAIN: ${TRACKER_DOMAIN:?set TRACKER_DOMAIN in deploy/.env}
+      TRACKER_HTTPS_PORT: ${TRACKER_HTTPS_PORT:-8443}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificate fetched on the host by renew-cert.sh (`tailscale cert`).
+      # The tailscaled socket is deliberately NOT mounted into the container.
+      - ./certs:/certs:ro
       - caddy-data:/data
       - caddy-config:/config
     networks:
       edge:
-        # Caddy's default route (and DNS) must go through the internet-facing
-        # network, never the internal one. Requires Docker Engine 28+.
+        # Ports are published through this network, so it must be Caddy's
+        # gateway rather than the internal one. Requires Docker Engine 28+.
         gw_priority: 1
       backend:
         ipv4_address: 172.30.0.2
@@ -56,7 +64,7 @@ services:
       - no-new-privileges:true
 
 networks:
-  # Internet-facing network; only Caddy joins it.
+  # Network through which Caddy's ports are published; only Caddy joins it.
   edge: {}
   # Internal network with no route to the outside world.
   backend:
