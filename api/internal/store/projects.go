@@ -116,13 +116,13 @@ func (s *Store) ListProjects(ctx context.Context, userID string) ([]Project, err
 		for rows.Next() {
 			p, err := scanProject(rows)
 			if err != nil {
-				rows.Close()
+				_ = rows.Close()
 				return err
 			}
 			idx[p.ID] = len(projects)
 			projects = append(projects, p)
 		}
-		rows.Close()
+		_ = rows.Close()
 		if err := rows.Err(); err != nil {
 			return err
 		}
@@ -346,12 +346,12 @@ func (s *Store) ReorderProjects(ctx context.Context, userID string, ids []string
 		for rows.Next() {
 			var id string
 			if err := rows.Scan(&id); err != nil {
-				rows.Close()
+				_ = rows.Close()
 				return err
 			}
 			have[id] = true
 		}
-		rows.Close()
+		_ = rows.Close()
 		if err := rows.Err(); err != nil {
 			return err
 		}
@@ -387,12 +387,12 @@ func setTags(ctx context.Context, tx *sql.Tx, userID, projectID string, names []
 	for rows.Next() {
 		var t Tag
 		if err := rows.Scan(&t.ID, &t.Name); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return err
 		}
 		existing = append(existing, t)
 	}
-	rows.Close()
+	_ = rows.Close()
 	if err := rows.Err(); err != nil {
 		return err
 	}
@@ -426,12 +426,12 @@ func setTags(ctx context.Context, tx *sql.Tx, userID, projectID string, names []
 	for rows.Next() {
 		var id string
 		if err := rows.Scan(&id); err != nil {
-			rows.Close()
+			_ = rows.Close()
 			return err
 		}
 		have[id] = true
 	}
-	rows.Close()
+	_ = rows.Close()
 	if err := rows.Err(); err != nil {
 		return err
 	}
@@ -498,7 +498,7 @@ func (s *Store) RenameTag(ctx context.Context, userID, id, name string) (Tag, er
 		for rows.Next() {
 			var tid, tname string
 			if err := rows.Scan(&tid, &tname); err != nil {
-				rows.Close()
+				_ = rows.Close()
 				return err
 			}
 			if tid == id {
@@ -507,7 +507,7 @@ func (s *Store) RenameTag(ctx context.Context, userID, id, name string) (Tag, er
 				conflict = true
 			}
 		}
-		rows.Close()
+		_ = rows.Close()
 		if err := rows.Err(); err != nil {
 			return err
 		}
