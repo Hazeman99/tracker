@@ -1,0 +1,18 @@
+# Secrets and local data
+.env
+*.db
+*.db-wal
+*.db-shm
+
+# Build output
+/api/bin/
+/desktop/build/bin/
+/desktop/frontend/dist/
+/desktop/frontend/node_modules/
+/desktop/bin/
+node_modules/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
