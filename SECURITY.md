@@ -206,5 +206,6 @@ Docker daemon (they own the database file regardless).
     menu. Release builds (`make desktop-build`) have none of this.
 13. **The macOS app is ad-hoc signed, not notarized.** Gatekeeper will ask for
     confirmation the first time it is opened (right-click → Open).
-14. **The Linux build was compiled and vetted in a Debian container but not
-    exercised interactively** during development; the macOS build was.
+14. **The Linux build was compiled and vetted in a Debian 13 container (GTK
+    4.18, WebKitGTK 2.54) but not exercised interactively** during
+    development; the macOS build was.

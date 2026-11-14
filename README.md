@@ -141,9 +141,9 @@ export PATH="$(go env GOPATH)/bin:$PATH"
 
 ### Linux
 
-1. Install the build dependencies (GTK 4 and WebKitGTK 6):
+1. Install the build dependencies (GTK 4.10+ and WebKitGTK 6; Debian 12's GTK 4.8 is too old):
 
-   - Debian 12+/Ubuntu 24.04+: `sudo apt install build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev`
+   - Debian 13+/Ubuntu 24.04+: `sudo apt install build-essential pkg-config libgtk-4-dev libwebkitgtk-6.0-dev`
    - Fedora: `sudo dnf install gcc pkgconf-pkg-config gtk4-devel webkitgtk6.0-devel`
 
 2. Make sure a Secret Service provider is running (GNOME Keyring is the
