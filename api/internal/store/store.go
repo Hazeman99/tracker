@@ -248,7 +248,6 @@ const (
 	EventLoginFailure    = "login_failure"
 	EventLockoutIP       = "lockout_ip"
 	EventLockoutAccount  = "lockout_account"
-	EventLoginBlocked    = "login_blocked"
 	EventLogout          = "logout"
 	EventSessionRevoked  = "session_revoked"
 	EventPasswordChanged = "password_changed"

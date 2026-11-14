@@ -75,6 +75,10 @@ func ensureFile(path string) error {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return fmt.Errorf("create database directory: %w", err)
 	}
+	// Best effort: tighten a pre-existing directory we own (e.g. the volume).
+	if dir != "." {
+		_ = os.Chmod(dir, 0o700) // #nosec G302 -- 0700 is owner-only for a directory
+	}
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600) // #nosec G304 -- path comes from operator configuration
 	if err != nil {
 		return fmt.Errorf("create database file: %w", err)

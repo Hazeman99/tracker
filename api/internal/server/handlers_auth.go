@@ -39,8 +39,10 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(strings.TrimSpace(req.Email))
 	acctKey := "acct:" + email
 
+	// Attempts made during a lockout are refused without being written to
+	// the audit trail (they appear as 429s in the request log), so a locked
+	// out attacker cannot grow the database.
 	if locked, d := s.lockedOut(ip, acctKey); locked {
-		s.audit(r, "", store.EventLoginBlocked)
 		retryAfter(w, d)
 		return
 	}
@@ -202,7 +204,6 @@ func (s *Server) changePassword(w http.ResponseWriter, r *http.Request) {
 	ip := clientIPFrom(r)
 	acctKey := "acct:" + strings.ToLower(user.Email)
 	if locked, d := s.lockedOut(ip, acctKey); locked {
-		s.audit(r, user.ID, store.EventLoginBlocked)
 		retryAfter(w, d)
 		return
 	}

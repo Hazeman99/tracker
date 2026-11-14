@@ -1,0 +1,26 @@
+{
+	# No admin endpoint; restart the container to apply config changes.
+	admin off
+}
+
+{$TRACKER_DOMAIN} {
+	# Certificates are obtained automatically; HTTP is redirected to HTTPS.
+	tls {
+		protocols tls1.2 tls1.3
+	}
+
+	header {
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		-Server
+		-Via
+	}
+
+	# The API enforces its own, tighter per-route caps.
+	request_body {
+		max_size 2MB
+	}
+
+	reverse_proxy api:8080 {
+		header_up -X-Forwarded-Host
+	}
+}

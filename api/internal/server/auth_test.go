@@ -130,7 +130,7 @@ func TestLockoutPerIP(t *testing.T) {
 	}
 	rec = e.do(req{method: "POST", path: "/v1/auth/login", ip: ip, body: map[string]string{"email": "a@example.com", "password": pwA}})
 	e.mustStatus(rec, http.StatusTooManyRequests)
-	if countKind(t, e, store.EventLockoutIP) != 1 || countKind(t, e, store.EventLoginBlocked) != 1 {
+	if countKind(t, e, store.EventLockoutIP) != 1 || countKind(t, e, store.EventLoginFailure) != 5 {
 		t.Fatalf("events %v", kinds(t, e))
 	}
 	// Other IPs are unaffected.
