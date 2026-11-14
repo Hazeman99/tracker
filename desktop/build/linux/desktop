@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=Tracker
+Comment=Personal project tracker
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/tracker %u
+Terminal=false
+Type=Application
+Icon=tracker
+Categories=Utility;
+StartupWMClass=tracker
+
+ 

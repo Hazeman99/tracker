@@ -143,8 +143,10 @@ Docker daemon (they own the database file regardless).
 - The token is stored in the OS keychain (macOS Keychain / Linux Secret
   Service via `zalando/go-keyring`; on macOS the secret is passed to
   `security` over stdin, not argv). It is never written to a file or to
-  `localStorage`. The config file holds only the server address, email and
-  device name.
+  `localStorage`. The config file (0600, in the OS config directory) holds
+  only the server address, the email and the remembered tag filter.
+- The HTTP client never follows redirects, so the bearer token cannot be
+  replayed to another host; responses are size-capped.
 - Only `https://` server addresses are accepted; `http://localhost` is
   allowed only in builds made with the `dev` build tag (`make desktop-dev`).
   TLS uses the system certificate store and verification is never disabled.
@@ -183,4 +185,26 @@ Docker daemon (they own the database file regardless).
 8. **The SQLite file is not encrypted at rest.** Protect the server and its
    backups; the backups contain password hashes and session token hashes.
 9. **govulncheck needs `vuln.go.dev`.** If your network blocks it, run
-   `make check VULNCHECK_IN_DOCKER=1`.
+   `make check VULNCHECK_IN_DOCKER=1` (the database is fetched through a
+   container and the scan runs locally against that copy).
+
+### Desktop
+
+10. **macOS Keychain access control.** `zalando/go-keyring` creates the item
+    through `/usr/bin/security`, so the item's access list trusts that tool:
+    any process running as your macOS user can read the token with
+    `security find-generic-password` without a prompt. This is still far
+    better than a file (no plaintext on disk, not in backups), but it is not
+    per-app isolation. Binding the item to the app would require the native
+    Keychain API through cgo (another dependency); not done without your OK.
+11. **Linux needs a running Secret Service** (GNOME Keyring, KWallet ≥ 5.97,
+    KeePassXC…). Without one, connecting fails with an explicit error; there
+    is deliberately no file fallback.
+12. **Dev builds are weaker by design.** `make desktop-dev` (build tag `dev`)
+    accepts `http://localhost` servers and serves the UI from the Vite dev
+    server without the CSP, enables the web inspector and the default context
+    menu. Release builds (`make desktop-build`) have none of this.
+13. **The macOS app is ad-hoc signed, not notarized.** Gatekeeper will ask for
+    confirmation the first time it is opened (right-click → Open).
+14. **The Linux build was compiled and vetted in a Debian container but not
+    exercised interactively** during development; the macOS build was.
