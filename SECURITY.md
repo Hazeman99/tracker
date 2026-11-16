@@ -1,8 +1,7 @@
 # Security
 
 Tracker is a single-user tool. It was specified for an API exposed to the
-public internet and is built to that standard; the current deployment
-additionally publishes it **only on the server's Tailscale address**.
+public internet and is built to that standard.
 This document records how the API maps to the
 [OWASP API Security Top 10 (2023)](https://owasp.org/API-Security/editions/2023/en/0x11-t10/),
 what the desktop app does to protect the session, and what is **not** fully
@@ -10,12 +9,11 @@ addressed.
 
 ## Threat model in one paragraph
 
-The API is designed as if any attacker on the internet could reach it. In the
-current deployment only devices on the owner's tailnet can open a connection
-(Caddy's ports are bound to the Tailscale IP), which is an additional layer,
-not a replacement for any control below. Attackers considered: anyone who can
-reach the API (another tailnet device, or the internet if the binding is ever
-widened). They do not have the password or a session token. Secondary threats: a stolen
+The API is designed as if any attacker on the internet could reach it — which,
+in the default deployment, they can. Narrowing exposure (`TRACKER_BIND_IP`, a
+firewall, a VPN) is an optional additional layer, not a replacement for any
+control below. Attackers considered: anyone who can reach the API. They do
+not have the password or a session token. Secondary threats: a stolen
 device or token, a malicious local process on one of the desktop machines,
 and a compromised dependency. Out of scope: a compromised server host or
 Docker daemon (they own the database file regardless).
@@ -98,15 +96,14 @@ Docker daemon (they own the database file regardless).
   `internal: true` Docker network with no route to the internet.
 
 ### API8 Security Misconfiguration — addressed
-- TLS terminates at Caddy with a Let's Encrypt certificate for the server's
-  MagicDNS name, obtained on the host by `tailscale cert`
-  (`deploy/renew-cert.sh`, weekly cron); the key is 0600 and mounted read-only.
-  The tailscaled socket is deliberately not mounted into the container, so a
-  compromised Caddy cannot reconfigure the host's Tailscale. HTTP→HTTPS
+- TLS terminates at Caddy. With `TRACKER_TLS` set to an e-mail address, Caddy
+  obtains and renews Let's Encrypt certificates automatically (ACME); set to
+  `internal`, it issues a certificate from its local CA (self-signed, for
+  LAN-only servers). Keys live in the `caddy-data` Docker volume. HTTP→HTTPS
   redirect, HSTS (2 years, includeSubDomains), TLS 1.2+ only, `Server`/`Via`
   headers removed, admin endpoint disabled.
-- Caddy's ports are published on the Tailscale IPv4 address only
-  (`TRACKER_BIND_IP`), not on the public interface or the LAN.
+- `TRACKER_BIND_IP` narrows the address Caddy's ports are published on
+  (default: all interfaces); the API container itself publishes no ports.
 - Every API response carries `X-Content-Type-Options: nosniff`,
   `Cache-Control: no-store`, `Referrer-Policy: no-referrer`,
   `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; …`,
@@ -124,8 +121,8 @@ Docker daemon (they own the database file regardless).
   SHM files are 0600 (umask 077 plus explicit chmod). Only Caddy publishes
   ports.
 - Configuration is through environment variables only; no secrets exist in the
-  repository (`deploy/.env` holds only the host name, Tailscale IP and port;
-  the certificate key lives in the git-ignored `deploy/certs/`).
+  repository (`deploy/.env` holds only the host name, TLS mode, bind address
+  and port; certificates live in the `caddy-data` Docker volume).
 - The client IP is taken from `X-Forwarded-For` only when the socket peer is
   Caddy's fixed address on the internal network, and then only the rightmost
   entry (the one Caddy appended) is used.
@@ -162,7 +159,10 @@ Docker daemon (they own the database file regardless).
   replayed to another host; responses are size-capped.
 - Only `https://` server addresses are accepted; `http://localhost` is
   allowed only in builds made with the `dev` build tag (`make desktop-dev`).
-  TLS uses the system certificate store and verification is never disabled.
+  TLS uses the system certificate store. Certificate verification can be
+  disabled for a server, but only by the user's explicit opt-in on the
+  Connect screen ("Disable SSL certificate verification", off by default,
+  shown with a warning, stored in the local config) — see limitation 16.
 - The webview loads only bundled assets (fonts included); a strict CSP
   (`default-src 'self'`, no remote origins) is set in `index.html`.
 - On any 401 the stored token is deleted and the app returns to the Connect
@@ -197,12 +197,11 @@ Docker daemon (they own the database file regardless).
    `no-new-privileges`), because the official image expects it.
 8. **The SQLite file is not encrypted at rest.** Protect the server and its
    backups; the backups contain password hashes and session token hashes.
-9. **Tailscale-specific.** Every device on the tailnet can reach the API, so
-   tailnet membership is part of the trust boundary; restrict it further with
-   Tailscale ACLs if other people or untrusted devices share the tailnet. The
-   certificate's name (machine and tailnet name) is published in Certificate
-   Transparency logs. Binding before the address exists relies on
-   `net.ipv4.ip_nonlocal_bind=1` on the host.
+9. **The API is internet-facing in the default deployment.** Anyone can reach
+   the login and healthz endpoints; the rate limits and lockouts above bound
+   password guessing. Narrow exposure with `TRACKER_BIND_IP`, a firewall or a
+   VPN if you do not need public reachability. With Let's Encrypt, the
+   domain name is published in Certificate Transparency logs.
 10. **govulncheck needs `vuln.go.dev`.** If your network blocks it, run
    `make check VULNCHECK_IN_DOCKER=1` (the database is fetched through a
    container and the scan runs locally against that copy).
@@ -228,3 +227,11 @@ Docker daemon (they own the database file regardless).
 15. **The Linux build was compiled and vetted in a Debian 13 container (GTK
     4.18, WebKitGTK 2.54) but not exercised interactively** during
     development; the macOS build was.
+16. **Disabling certificate verification removes MITM protection.** With
+    "Disable SSL certificate verification" enabled, the app accepts any
+    certificate for that server: anyone between the device and the server can
+    read and modify the traffic, including the password and session token. It
+    exists for self-signed deployments (`TRACKER_TLS=internal`); the safer
+    alternative is to trust Caddy's root CA on the device. It is off by
+    default, never enabled silently, and only affects the device on which it
+    was chosen.
