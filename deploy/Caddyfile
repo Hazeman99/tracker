@@ -1,14 +1,15 @@
 {
-	# No admin endpoint; restart the container to apply config or certificate changes.
+	# No admin endpoint; restart the container to apply config changes.
 	admin off
 	http_port 80
-	https_port {$TRACKER_HTTPS_PORT:8443}
+	https_port {$TRACKER_HTTPS_PORT:443}
 }
 
 {$TRACKER_DOMAIN} {
-	# Certificate for the Tailscale MagicDNS name, obtained on the host with
-	# `tailscale cert` (deploy/renew-cert.sh). No ACME from inside Caddy.
-	tls /certs/cert.pem /certs/key.pem {
+	# TRACKER_TLS is an e-mail address (automatic Let's Encrypt
+	# certificates) or the word "internal" (a self-signed certificate from
+	# Caddy's local CA). Certificates are stored in the caddy-data volume.
+	tls {$TRACKER_TLS:internal} {
 		protocols tls1.2 tls1.3
 	}
 
@@ -28,8 +29,9 @@
 	}
 }
 
-# Plain HTTP only redirects to HTTPS on the configured port. (Caddy's
-# automatic redirect would drop the non-standard port.)
+# Plain HTTP only redirects to HTTPS on the configured port (Caddy's
+# automatic redirect would drop a non-standard port). The ACME HTTP
+# challenge is answered before this site block is consulted.
 http://{$TRACKER_DOMAIN} {
-	redir https://{host}:{$TRACKER_HTTPS_PORT:8443}{uri} permanent
+	redir https://{host}:{$TRACKER_HTTPS_PORT:443}{uri} permanent
 }

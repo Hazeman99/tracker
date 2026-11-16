@@ -20,5 +20,5 @@ node_modules/
 # Local caches
 /.cache/
 
-# TLS certificate fetched by deploy/renew-cert.sh
+# TLS certificates from older deployments (never commit private keys)
 /deploy/certs/
