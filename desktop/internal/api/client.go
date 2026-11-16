@@ -49,10 +49,15 @@ type Client struct {
 
 // New returns a client for the origin base (already validated). It uses the
 // system certificate store, TLS 1.2+, and never follows redirects (so the
-// Authorization header is never replayed elsewhere).
-func New(base string) *Client {
+// Authorization header is never replayed elsewhere). insecureTLS skips
+// certificate verification — only ever set from the user's explicit,
+// off-by-default choice on the Connect screen (self-signed servers).
+func New(base string, insecureTLS bool) *Client {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
-	tr.TLSClientConfig = &tls.Config{MinVersion: tls.VersionTLS12}
+	tr.TLSClientConfig = &tls.Config{
+		MinVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: insecureTLS, // #nosec G402 -- explicit user opt-in per server, default false
+	}
 	tr.ResponseHeaderTimeout = 20 * time.Second
 	return &Client{
 		base: base,
@@ -96,7 +101,7 @@ func (c *Client) Do(ctx context.Context, method, path, token string, in, out any
 		if errors.As(err, &ue) {
 			var certErr *tls.CertificateVerificationError
 			if errors.As(err, &certErr) {
-				return &Error{Kind: KindOffline, Message: "the server's certificate is not trusted"}
+				return &Error{Kind: KindOffline, Message: "the server's certificate is not trusted (for a self-signed certificate, enable \"Disable SSL certificate verification\")"}
 			}
 		}
 		return &Error{Kind: KindOffline, Message: "cannot reach the server"}

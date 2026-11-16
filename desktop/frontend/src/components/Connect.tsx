@@ -7,6 +7,7 @@ export function Connect({ status, onConnected }: { status: Status; onConnected: 
   const [server, setServer] = useState(status.server || "");
   const [email, setEmail] = useState(status.email || "");
   const [password, setPassword] = useState("");
+  const [insecureTLS, setInsecureTLS] = useState(!!status.insecure_tls);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -15,7 +16,7 @@ export function Connect({ status, onConnected }: { status: Status; onConnected: 
     setBusy(true);
     setErr(null);
     try {
-      await api.connect(server, email, password);
+      await api.connect(server, email, password, insecureTLS);
       setPassword("");
       onConnected();
     } catch (e2) {
@@ -72,6 +73,16 @@ export function Connect({ status, onConnected }: { status: Status; onConnected: 
               autoFocus={!!status.server}
             />
           </label>
+          <label className="insecure-tls">
+            <input type="checkbox" checked={insecureTLS} onChange={(e) => setInsecureTLS(e.target.checked)} />
+            <span>Disable SSL certificate verification</span>
+          </label>
+          {insecureTLS && (
+            <p className="insecure-warning" role="alert">
+              The server's identity will not be verified. Only use this with a server you trust, such as one with a
+              self-signed certificate.
+            </p>
+          )}
           {err && (
             <p className="inline-error" role="alert">
               {err}

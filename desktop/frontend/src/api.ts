@@ -73,9 +73,9 @@ function normalizeProject(p: Project): Project {
 
 export const api = {
   status: (): Promise<Status> => Svc.Status(),
-  connect: async (server: string, email: string, password: string) => {
+  connect: async (server: string, email: string, password: string, insecureTLS: boolean) => {
     try {
-      await Svc.Connect(server, email, password);
+      await Svc.Connect(server, email, password, insecureTLS);
     } catch (err) {
       throw toAppError(err);
     }

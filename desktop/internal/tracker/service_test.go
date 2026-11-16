@@ -42,7 +42,7 @@ func setup(t *testing.T, handler http.HandlerFunc) (*Service, *memKeychain, stri
 	cfgPath := filepath.Join(t.TempDir(), "config.json")
 	kc := &memKeychain{m: map[string]string{}}
 	s := New(config.NewStoreAt(cfgPath), kc)
-	s.newAPI = func(base string) *api.Client { return api.NewWithHTTPClient(base, ts.Client()) }
+	s.newAPI = func(base string, _ bool) *api.Client { return api.NewWithHTTPClient(base, ts.Client()) }
 	return s, kc, ts.URL, cfgPath
 }
 
@@ -63,7 +63,7 @@ func TestConnectStoresTokenOnlyInKeychain(t *testing.T) {
 			_, _ = w.Write([]byte(`{"projects":[]}`))
 		}
 	})
-	if err := s.Connect(context.Background(), url, "a@example.com", "pw"); err != nil {
+	if err := s.Connect(context.Background(), url, "a@example.com", "pw", false); err != nil {
 		t.Fatal(err)
 	}
 	if kc.m[url] != fakeToken {
@@ -99,7 +99,7 @@ func TestUnauthorizedClearsToken(t *testing.T) {
 		w.WriteHeader(401)
 		_, _ = w.Write([]byte(`{"error":"unauthorized"}`))
 	})
-	if err := s.Connect(context.Background(), url, "a@example.com", "pw"); err != nil {
+	if err := s.Connect(context.Background(), url, "a@example.com", "pw", false); err != nil {
 		t.Fatal(err)
 	}
 	_, err := s.ListProjects(context.Background())
@@ -113,7 +113,7 @@ func TestUnauthorizedClearsToken(t *testing.T) {
 
 func TestRefusesPlainHTTP(t *testing.T) {
 	s, _, _, _ := setup(t, func(http.ResponseWriter, *http.Request) {})
-	err := s.Connect(context.Background(), "http://tracker.example.com", "a@example.com", "pw")
+	err := s.Connect(context.Background(), "http://tracker.example.com", "a@example.com", "pw", false)
 	if !api.IsKind(err, api.KindInvalid) {
 		t.Fatalf("plain http accepted: %v", err)
 	}
@@ -126,9 +126,41 @@ func TestUntrustedCertificateRejected(t *testing.T) {
 	defer ts.Close()
 	s := New(config.NewStoreAt(filepath.Join(t.TempDir(), "c.json")), &memKeychain{m: map[string]string{}})
 	// Default client: system roots only, so the test certificate is refused.
-	err := s.Connect(context.Background(), ts.URL, "a@example.com", "pw")
+	err := s.Connect(context.Background(), ts.URL, "a@example.com", "pw", false)
 	if !api.IsKind(err, api.KindOffline) || !strings.Contains(err.Error(), "certificate") {
 		t.Fatalf("self-signed certificate accepted or wrong error: %v", err)
+	}
+}
+
+func TestInsecureTLSOptInAcceptsSelfSigned(t *testing.T) {
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/v1/auth/login" {
+			_, _ = w.Write([]byte(`{"token":"` + fakeToken + `"}`))
+			return
+		}
+		_, _ = w.Write([]byte(`{"projects":[]}`))
+	}))
+	defer ts.Close()
+	cfgPath := filepath.Join(t.TempDir(), "config.json")
+	kc := &memKeychain{m: map[string]string{}}
+	s := New(config.NewStoreAt(cfgPath), kc)
+	// Real client (api.New), with verification disabled by the user.
+	if err := s.Connect(context.Background(), ts.URL, "a@example.com", "pw", true); err != nil {
+		t.Fatalf("connect with insecure TLS: %v", err)
+	}
+	if c, _ := config.NewStoreAt(cfgPath).Load(); !c.InsecureTLS {
+		t.Fatal("insecure_tls not persisted")
+	}
+	if st := s.Status(); !st.InsecureTLS {
+		t.Fatal("status does not report insecure_tls")
+	}
+	// A restored service (restart) must honour the saved flag.
+	s2 := New(config.NewStoreAt(cfgPath), kc)
+	if !s2.Status().Connected {
+		t.Fatal("session not restored")
+	}
+	if _, err := s2.ListProjects(context.Background()); err != nil {
+		t.Fatalf("restored service ignores insecure_tls: %v", err)
 	}
 }
 
@@ -136,7 +168,7 @@ func TestRedirectsNotFollowed(t *testing.T) {
 	s, _, url, _ := setup(t, func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "https://evil.example/steal", http.StatusFound)
 	})
-	err := s.Connect(context.Background(), url, "a@example.com", "pw")
+	err := s.Connect(context.Background(), url, "a@example.com", "pw", false)
 	if err == nil || !strings.Contains(err.Error(), "redirect") {
 		t.Fatalf("redirect: %v", err)
 	}

@@ -23,7 +23,7 @@ import (
 type Service struct {
 	cfg      *config.Store
 	keychain secrets.Keychain
-	newAPI   func(base string) *api.Client
+	newAPI   func(base string, insecureTLS bool) *api.Client
 
 	mu     sync.Mutex
 	server string
@@ -37,7 +37,7 @@ func New(cfg *config.Store, kc secrets.Keychain) *Service {
 	if c, err := cfg.Load(); err == nil && c.Server != "" {
 		if origin, err := serverurl.Normalize(c.Server); err == nil {
 			if tok, err := kc.Get(origin); err == nil && tok != "" {
-				s.server, s.token, s.client = origin, tok, api.New(origin)
+				s.server, s.token, s.client = origin, tok, api.New(origin, c.InsecureTLS)
 			}
 		}
 	}
@@ -46,12 +46,13 @@ func New(cfg *config.Store, kc secrets.Keychain) *Service {
 
 // Status describes the connection for the frontend.
 type Status struct {
-	AppName   string `json:"app_name"`
-	Connected bool   `json:"connected"`
-	Server    string `json:"server"`
-	Host      string `json:"host"`
-	Email     string `json:"email"`
-	Device    string `json:"device"`
+	AppName     string `json:"app_name"`
+	Connected   bool   `json:"connected"`
+	Server      string `json:"server"`
+	Host        string `json:"host"`
+	Email       string `json:"email"`
+	Device      string `json:"device"`
+	InsecureTLS bool   `json:"insecure_tls"`
 }
 
 // Status returns the app name and whether a session is stored. It also
@@ -60,7 +61,7 @@ func (s *Service) Status() Status {
 	c, _ := s.cfg.Load()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	st := Status{AppName: brand.Name, Connected: s.token != "", Server: c.Server, Email: c.Email, Device: deviceName()}
+	st := Status{AppName: brand.Name, Connected: s.token != "", Server: c.Server, Email: c.Email, Device: deviceName(), InsecureTLS: c.InsecureTLS}
 	if s.server != "" {
 		st.Server = s.server
 	}
@@ -83,7 +84,9 @@ func deviceName() string {
 }
 
 // Connect signs in to server and stores the session token in the keychain.
-func (s *Service) Connect(ctx context.Context, server, email, password string) error {
+// insecureTLS disables certificate verification for this server (the
+// "Disable SSL certificate verification" option on the Connect screen).
+func (s *Service) Connect(ctx context.Context, server, email, password string, insecureTLS bool) error {
 	origin, err := serverurl.Normalize(server)
 	if err != nil {
 		return &api.Error{Kind: api.KindInvalid, Message: err.Error()}
@@ -92,7 +95,7 @@ func (s *Service) Connect(ctx context.Context, server, email, password string) e
 	if email == "" || password == "" {
 		return &api.Error{Kind: api.KindInvalid, Message: "enter your email and password"}
 	}
-	client := s.newAPI(origin)
+	client := s.newAPI(origin, insecureTLS)
 	var out struct {
 		Token string `json:"token"`
 	}
@@ -113,7 +116,7 @@ func (s *Service) Connect(ctx context.Context, server, email, password string) e
 		_ = client.Do(ctx, "POST", "/v1/auth/logout", out.Token, nil, nil)
 		return &api.Error{Kind: api.KindServer, Message: "could not save the session in the system keychain"}
 	}
-	if err := s.cfg.Update(func(c *config.Config) { c.Server, c.Email = origin, email }); err != nil {
+	if err := s.cfg.Update(func(c *config.Config) { c.Server, c.Email, c.InsecureTLS = origin, email, insecureTLS }); err != nil {
 		return &api.Error{Kind: api.KindServer, Message: "could not save settings"}
 	}
 	s.mu.Lock()

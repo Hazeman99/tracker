@@ -15,9 +15,12 @@ import (
 
 // Config is the persisted, non-secret configuration.
 type Config struct {
-	Server    string   `json:"server"`
-	Email     string   `json:"email"`
-	TagFilter []string `json:"tag_filter"`
+	Server string `json:"server"`
+	Email  string `json:"email"`
+	// InsecureTLS skips certificate verification for Server (the user's
+	// explicit choice on the Connect screen, for self-signed servers).
+	InsecureTLS bool     `json:"insecure_tls,omitempty"`
+	TagFilter   []string `json:"tag_filter"`
 }
 
 // Store reads and writes the config file.

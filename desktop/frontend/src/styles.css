@@ -1060,6 +1060,26 @@ dialog.confirm p {
 .connect input.mono {
   font-size: 13.5px;
 }
+.connect .insecure-tls {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.connect .insecure-tls input {
+  width: 15px;
+  min-height: 0;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+.connect .insecure-warning {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--accent);
+}
 .connect .btn-primary {
   min-height: 44px;
   font-size: 14px;
