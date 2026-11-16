@@ -12,8 +12,8 @@ priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
 description: "Personal project tracker"
 vendor: "Tracker"
-homepage: ""
-license: "Proprietary"
+homepage: "https://github.com/Hazeman99/tracker"
+license: "MIT"
 release: "1"
 
 contents:
