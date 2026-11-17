@@ -19,6 +19,8 @@ release: "1"
 contents:
   - src: "./bin/tracker"
     dst: "/usr/local/bin/tracker"
+  - src: "./build/linux/apparmor/tracker"
+    dst: "/etc/apparmor.d/tracker"
   - src: "./build/appicon.png"
     dst: "/usr/share/icons/hicolor/128x128/apps/tracker.png"
   - src: "./build/linux/tracker.desktop"

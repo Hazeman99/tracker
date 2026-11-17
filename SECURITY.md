@@ -165,6 +165,11 @@ Docker daemon (they own the database file regardless).
   shown with a warning, stored in the local config) — see limitation 16.
 - The webview loads only bundled assets (fonts included); a strict CSP
   (`default-src 'self'`, no remote origins) is set in `index.html`.
+- The Linux packages ship an AppArmor profile (`/etc/apparmor.d/tracker`,
+  `flags=(unconfined)`) whose only effect is granting `userns`, so that
+  WebKitGTK's own bubblewrap sandbox can keep working on kernels that
+  restrict unprivileged user namespaces (Ubuntu 23.10+). It enables the web
+  process sandbox rather than weakening anything.
 - On any 401 the stored token is deleted and the app returns to the Connect
   screen.
 

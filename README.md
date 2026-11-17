@@ -37,6 +37,16 @@ Download the latest build from the
   (GNOME Keyring, KWallet ≥ 5.97, KeePassXC…) — it stores the session in the
   keychain and refuses to sign in without one.
 
+  On Ubuntu 23.10+ the kernel blocks the unprivileged user namespaces that
+  WebKitGTK's sandbox needs (the symptom is a crash at launch with
+  `bwrap: setting up uid map: Permission denied`). The `.deb`/`.rpm`
+  packages install and load an AppArmor profile
+  (`/etc/apparmor.d/tracker`) that grants it. If you use the bare binary
+  instead, copy
+  [`desktop/build/linux/apparmor/tracker`](desktop/build/linux/apparmor/tracker)
+  to `/etc/apparmor.d/tracker`, adjust the binary path inside it to where
+  you put `tracker`, and run `sudo apparmor_parser -r /etc/apparmor.d/tracker`.
+
 On first run, enter your server address (e.g. `https://tracker.example.com`),
 email and password on the Connect screen. If your server uses a self-signed
 certificate, tick **Disable SSL certificate verification** — only do this for
