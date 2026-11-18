@@ -29,8 +29,12 @@ Download the latest build from the
 [releases page](https://github.com/Hazeman99/tracker/releases):
 
 - **macOS (Apple Silicon)** — unzip `tracker_*_macos_arm64.app.zip` and move
-  `tracker.app` to `/Applications`. The app is ad-hoc signed, not notarized:
-  the first time, right-click it and choose **Open**.
+  `tracker.app` to `/Applications`. The app is ad-hoc signed, not notarized,
+  so the first launch is blocked with "Apple could not verify…". Click
+  **Done** (not Move to Trash), then go to **System Settings → Privacy &
+  Security**, scroll to the Security section and click **Open Anyway**.
+  This is needed once per update. Equivalent terminal one-liner:
+  `xattr -d com.apple.quarantine /Applications/tracker.app`.
 - **Linux** — install the `.deb` (Debian 13+/Ubuntu 24.04+) or `.rpm`
   (Fedora) for your architecture, or use the bare binary from the `.tar.gz`.
   The app needs GTK 4.10+, WebKitGTK 6.0 and a running Secret Service

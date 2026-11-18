@@ -227,8 +227,11 @@ Docker daemon (they own the database file regardless).
     accepts `http://localhost` servers and serves the UI from the Vite dev
     server without the CSP, enables the web inspector and the default context
     menu. Release builds (`make desktop-build`) have none of this.
-14. **The macOS app is ad-hoc signed, not notarized.** Gatekeeper will ask for
-    confirmation the first time it is opened (right-click → Open).
+14. **The macOS app is ad-hoc signed, not notarized.** Gatekeeper blocks the
+    first launch ("Apple could not verify…"); it must be approved once via
+    System Settings → Privacy & Security → Open Anyway (macOS 15+ removed
+    the right-click → Open bypass), or by clearing the quarantine attribute.
+    Notarized builds would require an Apple Developer ID.
 15. **The Linux build was compiled and vetted in a Debian 13 container (GTK
     4.18, WebKitGTK 2.54) but not exercised interactively** during
     development; the macOS build was.
