@@ -101,6 +101,8 @@ export const api = {
   revokeSession: (id: string, current: boolean) => run(Svc.RevokeSession(id, current)),
   changePassword: (current: string, next: string) => run(Svc.ChangePassword(current, next)),
 
+  completeOnboarding: () => Svc.CompleteOnboarding().catch(() => undefined),
+
   tagFilter: async () => (await Svc.TagFilter()) ?? [],
   setTagFilter: (tags: string[]) => Svc.SetTagFilter(tags).catch(() => undefined),
 };

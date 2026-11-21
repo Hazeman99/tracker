@@ -6,6 +6,7 @@ import { Archived } from "./components/Archived";
 import { Board } from "./components/Board";
 import { ConfirmProvider } from "./components/Confirm";
 import { Connect } from "./components/Connect";
+import { Onboarding } from "./components/Onboarding";
 import { ProjectPage } from "./components/ProjectPage";
 
 type Screen = { name: "board" } | { name: "project"; id: string } | { name: "archived" };
@@ -31,6 +32,10 @@ export function App() {
   const toBoard = useCallback(() => setScreen({ name: "board" }), []);
   const openProject = useCallback((id: string) => setScreen({ name: "project", id }), []);
   const openArchived = useCallback(() => setScreen({ name: "archived" }), []);
+  const finishOnboarding = useCallback(() => {
+    setStatus((s) => (s ? { ...s, onboarded: true } : s));
+    void api.completeOnboarding();
+  }, []);
 
   if (!status) return null;
   if (!status.connected) return <Connect status={status} onConnected={loadStatus} />;
@@ -41,6 +46,7 @@ export function App() {
         {screen.name === "board" && <Board onOpen={openProject} onArchived={openArchived} />}
         {screen.name === "project" && <ProjectPage key={screen.id} id={screen.id} onBack={toBoard} />}
         {screen.name === "archived" && <Archived onBack={toBoard} />}
+        {!status.onboarded && <Onboarding appName={status.app_name} onDone={finishOnboarding} />}
       </ConfirmProvider>
     </DataProvider>
   );

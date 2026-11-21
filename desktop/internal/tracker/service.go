@@ -53,6 +53,9 @@ type Status struct {
 	Email       string `json:"email"`
 	Device      string `json:"device"`
 	InsecureTLS bool   `json:"insecure_tls"`
+	// Onboarded reports whether the first-run tutorial was already shown on
+	// this device.
+	Onboarded bool `json:"onboarded"`
 }
 
 // Status returns the app name and whether a session is stored. It also
@@ -61,7 +64,7 @@ func (s *Service) Status() Status {
 	c, _ := s.cfg.Load()
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	st := Status{AppName: brand.Name, Connected: s.token != "", Server: c.Server, Email: c.Email, Device: deviceName(), InsecureTLS: c.InsecureTLS}
+	st := Status{AppName: brand.Name, Connected: s.token != "", Server: c.Server, Email: c.Email, Device: deviceName(), InsecureTLS: c.InsecureTLS, Onboarded: c.Onboarded}
 	if s.server != "" {
 		st.Server = s.server
 	}
@@ -307,4 +310,10 @@ func (s *Service) SetTagFilter(tags []string) error {
 		return errors.New("too many tags")
 	}
 	return s.cfg.Update(func(c *config.Config) { c.TagFilter = tags })
+}
+
+// CompleteOnboarding records that the first-run tutorial was finished or
+// skipped, so it is not shown again on this device.
+func (s *Service) CompleteOnboarding() error {
+	return s.cfg.Update(func(c *config.Config) { c.Onboarded = true })
 }

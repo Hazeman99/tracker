@@ -21,6 +21,9 @@ type Config struct {
 	// explicit choice on the Connect screen, for self-signed servers).
 	InsecureTLS bool     `json:"insecure_tls,omitempty"`
 	TagFilter   []string `json:"tag_filter"`
+	// Onboarded is set once the first-run tutorial has been finished or
+	// skipped on this device.
+	Onboarded bool `json:"onboarded,omitempty"`
 }
 
 // Store reads and writes the config file.

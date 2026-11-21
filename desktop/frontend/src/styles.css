@@ -1136,3 +1136,36 @@ dialog.confirm p {
   letter-spacing: 0;
   text-transform: none;
 }
+
+/* ------------------------------------------------------------------ onboarding */
+dialog.onboarding {
+  width: 440px;
+}
+dialog.onboarding p {
+  min-height: 4.65em; /* keeps the dialog from jumping between steps */
+}
+.onboarding-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -6px -6px 12px 0;
+}
+.onboarding-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.onboarding-dots {
+  display: flex;
+  gap: 6px;
+}
+.onboarding-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--border-strong);
+}
+.onboarding-dots span[data-active="true"] {
+  background: var(--accent);
+}

@@ -30,8 +30,18 @@ func (k *memKeychain) Get(s string) (string, error) {
 	}
 	return v, nil
 }
-func (k *memKeychain) Set(s, t string) error { k.mu.Lock(); defer k.mu.Unlock(); k.m[s] = t; return nil }
-func (k *memKeychain) Delete(s string) error { k.mu.Lock(); defer k.mu.Unlock(); delete(k.m, s); return nil }
+func (k *memKeychain) Set(s, t string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	k.m[s] = t
+	return nil
+}
+func (k *memKeychain) Delete(s string) error {
+	k.mu.Lock()
+	defer k.mu.Unlock()
+	delete(k.m, s)
+	return nil
+}
 
 const fakeToken = "tok_abcdefghijklmnopqrstuvwxyz0123456789ABCDE"
 
@@ -171,5 +181,21 @@ func TestRedirectsNotFollowed(t *testing.T) {
 	err := s.Connect(context.Background(), url, "a@example.com", "pw", false)
 	if err == nil || !strings.Contains(err.Error(), "redirect") {
 		t.Fatalf("redirect: %v", err)
+	}
+}
+
+func TestOnboardingIsRememberedPerDevice(t *testing.T) {
+	cfgPath := filepath.Join(t.TempDir(), "config.json")
+	s := New(config.NewStoreAt(cfgPath), &memKeychain{m: map[string]string{}})
+	if s.Status().Onboarded {
+		t.Fatal("fresh install already onboarded")
+	}
+	if err := s.CompleteOnboarding(); err != nil {
+		t.Fatal(err)
+	}
+	// A new process reading the same config file sees the flag.
+	s2 := New(config.NewStoreAt(cfgPath), &memKeychain{m: map[string]string{}})
+	if !s2.Status().Onboarded {
+		t.Fatal("onboarding flag not persisted")
 	}
 }
