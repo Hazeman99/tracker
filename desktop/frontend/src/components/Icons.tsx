@@ -50,3 +50,22 @@ export function MoreIcon({ size = 14 }: P) {
     </svg>
   );
 }
+
+export function ChevronIcon({ size = 12, open = false }: P & { open?: boolean }) {
+  return (
+    <svg
+      aria-hidden="true"
+      width={size}
+      height={size}
+      viewBox="0 0 12 12"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={{ transform: open ? "rotate(90deg)" : undefined }}
+    >
+      <path d="M4.5 2.5L8 6l-3.5 3.5" />
+    </svg>
+  );
+}

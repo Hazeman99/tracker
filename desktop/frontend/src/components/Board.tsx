@@ -7,6 +7,7 @@ import { PencilIcon, PlusIcon } from "./Icons";
 import { InlineError, useInlineError } from "./InlineError";
 import { SyncIndicator } from "./Sync";
 import { TaskRow } from "./TaskRow";
+import { useLingeringDone } from "../lingering";
 
 type Props = {
   onOpen: (id: string) => void;
@@ -202,15 +203,21 @@ function Column({ project: p, onOpen, onTag, dragging, dropBefore, onDragStart, 
   const [composing, setComposing] = useState(false);
   const [logDraft, setLogDraft] = useState("");
   const [err, showErr] = useInlineError();
+  const { lingering, start: startLinger, stop: stopLinger } = useLingeringDone();
   const tasks = p.tasks ?? [];
+  // The board shows open tasks, plus tasks checked in the last few seconds.
+  const shownTasks = tasks.filter((t) => !t.done || lingering.has(t.id));
   const log = boardLog(p.log ?? []);
 
   const toggle = async (id: string, done: boolean) => {
+    if (done) startLinger(id);
+    else stopLinger(id);
     updateProject(p.id, (x) => ({ ...x, tasks: x.tasks!.map((t) => (t.id === id ? { ...t, done } : t)) }));
     try {
       const t = await api.updateTask(id, { done });
       updateProject(p.id, (x) => ({ ...x, tasks: x.tasks!.map((y) => (y.id === id ? t : y)) }));
     } catch (e) {
+      stopLinger(id);
       updateProject(p.id, (x) => ({ ...x, tasks: x.tasks!.map((t) => (t.id === id ? { ...t, done: !done } : t)) }));
       showErr(e);
     }
@@ -309,9 +316,12 @@ function Column({ project: p, onOpen, onTag, dragging, dropBefore, onDragStart, 
 
         <div className="column-section">
           <h3 className="section-label">Tasks</h3>
-          {tasks.map((t) => (
-            <TaskRow key={t.id} task={t} readOnly={readOnly || t.id.startsWith("tmp-")} onToggle={() => void toggle(t.id, !t.done)} />
+          {shownTasks.map((t) => (
+            <div key={t.id} className="task-linger" data-leaving={t.done ? "true" : undefined}>
+              <TaskRow task={t} readOnly={readOnly || t.id.startsWith("tmp-")} onToggle={() => void toggle(t.id, !t.done)} />
+            </div>
           ))}
+          {tasks.length > 0 && shownTasks.length === 0 && <p className="empty-note">All tasks done.</p>}
           <input
             type="text"
             className="field"

@@ -1084,3 +1084,55 @@ dialog.confirm p {
   min-height: 44px;
   font-size: 14px;
 }
+
+/* ------------------------------------------------------------------ board: checked tasks */
+/* A task checked on the board stays for 3 s, fading out over the last part. */
+.task-linger[data-leaving="true"] {
+  animation: task-leave 3s linear forwards;
+}
+@keyframes task-leave {
+  0%,
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .task-linger[data-leaving="true"] {
+    animation: none;
+  }
+}
+
+/* ------------------------------------------------------------------ project page: done tasks */
+.done-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.done-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--text-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: left;
+}
+.done-toggle:hover {
+  color: var(--text-secondary);
+}
+.done-toggle .count {
+  letter-spacing: 0;
+  text-transform: none;
+}

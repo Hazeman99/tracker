@@ -4,11 +4,12 @@ import type { LogEntry, Project } from "../api";
 import { useData } from "../data";
 import { formatDate, modKey, sameTag, taskCounts } from "../format";
 import { useConfirm } from "./Confirm";
-import { BackIcon, CloseIcon, PlusIcon } from "./Icons";
+import { BackIcon, ChevronIcon, CloseIcon, PlusIcon } from "./Icons";
 import { InlineError, useInlineError } from "./InlineError";
 import { Menu } from "./Menu";
 import { SyncIndicator } from "./Sync";
 import { TaskRow } from "./TaskRow";
+import { useLingeringDone } from "../lingering";
 
 const MAX_TAGS = 20;
 
@@ -18,6 +19,8 @@ export function ProjectPage({ id, onBack }: { id: string; onBack: () => void }) 
   const [project, setProject] = useState<Project | null>(fromBoard);
   const [err, showErr] = useInlineError();
   const confirm = useConfirm();
+  const { lingering, start: startLinger, stop: stopLinger } = useLingeringDone();
+  const [showDone, setShowDone] = useState(false);
 
   // Load the full project (all tasks and entries); refetch on focus / every 60 s.
   useEffect(() => {
@@ -137,7 +140,12 @@ export function ProjectPage({ id, onBack }: { id: string; onBack: () => void }) 
   };
 
   const tasks = p.tasks ?? [];
-  const sortedTasks = [...tasks.filter((t) => !t.done), ...tasks.filter((t) => t.done)];
+  // Open tasks (plus tasks checked in the last few seconds), then the done
+  // tasks, newest first, behind the collapsed "Done" toggle.
+  const openTasks = tasks.filter((t) => !t.done || lingering.has(t.id));
+  const doneTasks = tasks
+    .filter((t) => t.done && !lingering.has(t.id))
+    .sort((a, b) => (b.completed_at ?? "").localeCompare(a.completed_at ?? ""));
   const log = [...(p.log ?? [])].sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   const addTask = async (title: string) => {
@@ -154,6 +162,8 @@ export function ProjectPage({ id, onBack }: { id: string; onBack: () => void }) 
   const patchTask = (taskId: string, patch: { title?: string; done?: boolean }) => {
     const old = tasks.find((t) => t.id === taskId);
     if (!old) return;
+    if (patch.done === true) startLinger(taskId);
+    if (patch.done === false) stopLinger(taskId);
     void mutate(
       (x) => ({ ...x, tasks: (x.tasks ?? []).map((t) => (t.id === taskId ? { ...t, ...patch } : t)) }),
       (x) => ({ ...x, tasks: (x.tasks ?? []).map((t) => (t.id === taskId ? old : t)) }),
@@ -200,6 +210,18 @@ export function ProjectPage({ id, onBack }: { id: string; onBack: () => void }) 
       () => api.deleteLogEntry(entry.id),
     );
   };
+
+  const taskRow = (t: (typeof tasks)[number]) => (
+    <TaskRow
+      key={t.id}
+      task={t}
+      large
+      readOnly={readOnly || t.id.startsWith("tmp-")}
+      onToggle={() => patchTask(t.id, { done: !t.done })}
+      onRename={(title) => patchTask(t.id, { title })}
+      onDelete={() => void deleteTask(t.id)}
+    />
+  );
 
   return (
     <div className="app">
@@ -256,18 +278,33 @@ export function ProjectPage({ id, onBack }: { id: string; onBack: () => void }) 
             </div>
             <AddTaskForm readOnly={readOnly} onAdd={addTask} />
             <div className="task-list">
-              {sortedTasks.map((t) => (
-                <TaskRow
-                  key={t.id}
-                  task={t}
-                  large
-                  readOnly={readOnly || t.id.startsWith("tmp-")}
-                  onToggle={() => patchTask(t.id, { done: !t.done })}
-                  onRename={(title) => patchTask(t.id, { title })}
-                  onDelete={() => void deleteTask(t.id)}
-                />
+              {openTasks.map((t) => (
+                <div key={t.id} className="task-linger" data-leaving={t.done ? "true" : undefined}>
+                  {taskRow(t)}
+                </div>
               ))}
+              {openTasks.length === 0 && tasks.length > 0 && <p className="empty-note">All tasks done.</p>}
             </div>
+            {doneTasks.length > 0 && (
+              <div className="done-tasks">
+                <button
+                  type="button"
+                  className="done-toggle"
+                  aria-expanded={showDone}
+                  aria-controls="done-task-list"
+                  onClick={() => setShowDone((v) => !v)}
+                >
+                  <ChevronIcon open={showDone} />
+                  <span>Done</span>
+                  <span className="count">{doneTasks.length}</span>
+                </button>
+                {showDone && (
+                  <div className="task-list" id="done-task-list">
+                    {doneTasks.map(taskRow)}
+                  </div>
+                )}
+              </div>
+            )}
           </aside>
         </div>
       </div>
