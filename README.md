@@ -1,8 +1,18 @@
-# Tracker
+<p align="center">
+  <img src="desktop/build/appicon.png" alt="Tracker app icon" width="112">
+</p>
 
-[![CI](https://github.com/Hazeman99/tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Hazeman99/tracker/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/Hazeman99/tracker)](https://github.com/Hazeman99/tracker/releases)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+<h1 align="center">Tracker</h1>
+
+<p align="center">
+  <a href="https://github.com/Hazeman99/tracker/actions/workflows/ci.yml"><img src="https://github.com/Hazeman99/tracker/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Hazeman99/tracker/releases"><img src="https://img.shields.io/github/v/release/Hazeman99/tracker" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
+</p>
+
+<p align="center">
+  <img src="docs/images/board.png" alt="The board: one column per project with tasks, tags and log entries" width="900">
+</p>
 
 A minimal, self-hosted, single-user project tracker: a small Go API you run
 on your own server, and a native desktop app for macOS and Linux.
@@ -22,6 +32,19 @@ on your own server, and a native desktop app for macOS and Linux.
 - Security first: Argon2id passwords, hashed session tokens, strict
   per-user data isolation, rate limiting and login lockout. The full
   threat model and OWASP API Top 10 review live in [SECURITY.md](SECURITY.md).
+
+## Screenshots
+
+Check off a task and it stays on the board for a few seconds, then moves to
+the project's **Done** list:
+
+<p align="center">
+  <img src="docs/images/demo.gif" alt="Checking a task on the board, then opening the project and expanding its Done list" width="900">
+</p>
+
+| Project page | Connect screen | First-run tour |
+| --- | --- | --- |
+| [![Project page with log entries, open tasks and the Done list](docs/images/project.png)](docs/images/project.png) | [![Connect screen with server address, email and password](docs/images/connect.png)](docs/images/connect.png) | [![First-run tutorial dialog over the board](docs/images/onboarding.png)](docs/images/onboarding.png) |
 
 ## Install the desktop app
 
